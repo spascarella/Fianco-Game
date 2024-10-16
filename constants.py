@@ -9,7 +9,7 @@ FONT_COLOR = (0, 0, 0)  # Black
 STONE_RADIUS = SQUARE_SIZE // 3 # Radius of the stones
 
 
-DEPTH = 6
+DEPTH = 5
 ALPHA = -math.inf
 BETA = math.inf
 

@@ -49,46 +49,105 @@ def random_agent(board):
     return None  # No valid moves available
 
 
+
 def main():
     board = FiancoBoard()
-    engine = FiancoEngine()  # Ensure you have the AI engine instantiated
+    engine = FiancoEngine()
     game_over = False
-    print("Initial board:\n")
-    print_board(board)  # Use the new print function
-
+    print("Initial board:")
+    print_board(board)
     while not game_over:
         winner = board.is_winner()
         if winner:
             print(f"Player {winner} wins!")
             game_over = True
             break
-
-        if board.current_player == 1:  # AI plays for white (Player 1)
-            print("White AI is thinking...")
-            start = time.time()
-            # AI decides on the best move
-            best_score, best_move = engine.negamax(board, DEPTH, ALPHA, BETA, 1)
+        if board.current_player == 1:  # Human player's turn (White)
+            valid_moves, valid_captures = board.get_valid_moves_and_captures(board.current_player)
+            print("Available captures for the human: ", valid_captures)
+            print("Available moves for the human: ", valid_moves)
+            print("Enter your move in the format '0,0-0,1':")
+            
+            move_input = input().strip()
+            move = parse_move(move_input)
+            if valid_captures:
+                if move in valid_captures:
+                    board.apply_move(move)
+                    print(f"Black played {move}.")
+                    print_board(board)
+                else:
+                    print("Invalid capture. Please try again.")
+                    print("Valid captures: ", valid_captures)
+                    continue
+            else:
+                if move in valid_moves:
+                    board.apply_move(move)
+                    print(f"Black played {move}.")
+                    print_board(board)
+                else:
+                    print(f"Invalid move for the player {board.current_player}. Please try again.")
+                    continue
+        elif board.current_player == 2:  # AI plays for Black (Player 1)
+            print("Black AI is thinking...")
+            start = time.time() 
+            _, best_move = engine.negamax(board, DEPTH, ALPHA, BETA, -1)            
             board.apply_move(best_move)
             end = time.time()
-            print(f"White AI played {best_move} with a score of {best_score} in {(end - start)} seconds.")
-            logging.debug(f"White AI played {best_move} with a score of {best_score} in {(end - start)} seconds.")
-            print_board(board)
-
-        elif board.current_player == 2:  # Random agent plays for black (Player 2)
-            print("Black random agent is thinking...")
-            move = random_agent(board)  # Get a random valid move
-            if move:
-                board.apply_move(move)
-                print(f"Black random agent played {move}.")
-                logging.debug(f"Black random agent played {move}.")
-            else:
-                print("No valid moves available for the black random agent.")
+            print(f"Black AI played {best_move} in {(end - start)} seconds.")
             print_board(board)
 
 if __name__ == "__main__":
     main()
+    
 
 
+'''
+def main():
+    board = FiancoBoard()
+    engine = FiancoEngine()
+    game_over = False
+    print("Initial board:")
+    print_board(board)
+    while not game_over:
+        winner = board.is_winner()
+        if winner:
+            print(f"Player {winner} wins!")
+            game_over = True
+            break
+        if board.current_player == 1:  # Human player's turn (White)
+            valid_moves, valid_captures = board.get_valid_moves_and_captures(board.current_player)
+            print("Available captures for the human: ", valid_captures)
+            print("Available moves for the human: ", valid_moves)
+            print("Enter your move in the format '0,0-0,1':")
             
+            move_input = input().strip()
+            move = parse_move(move_input)
+            if valid_captures:
+                if move in valid_captures:
+                    board.apply_move(move)
+                    print(f"White played {move}.")
+                    print_board(board)
+                else:
+                    print("Invalid capture. Please try again.")
+                    print("Valid captures: ", valid_captures)
+                    continue
+            else:
+                if move in valid_moves:
+                    board.apply_move(move)
+                    print(f"White played {move}.")
+                    print_board(board)
+                else:
+                    print("Invalid move. Please try again.")
+                    continue
+        elif board.current_player == 2:  # AI plays for black (Player 2)
+            print("Black AI is thinking...")
+            start = time.time()
+            _, best_move = engine.negamax(board, DEPTH, ALPHA, BETA, -1)            
+            board.apply_move(best_move)
+            end = time.time()
+            print(f"Black AI played {best_move} in {(end - start)} seconds.")
+            print_board(board)
 
-
+if __name__ == "__main__":
+    main()
+'''

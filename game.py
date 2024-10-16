@@ -1,13 +1,12 @@
 from constants import *
 import numpy as np
 import copy
-import random
 
 
 class FiancoBoard:
     def __init__(self):
         self.board = self.setup_board()
-        self.current_player = 1  # 1 for white, 2 for black
+        self.current_player = 2  # 1 for white, 2 for black
         self.move_history = []  # To store history of moves
         self.move_list = []
 
@@ -153,7 +152,7 @@ class FiancoBoard:
         # 1. Count stones and weight them
         white_stones = np.sum(self.board == 1)
         black_stones = np.sum(self.board == 2)
-        score_diff = (white_stones - black_stones) * 10
+        score_diff = (white_stones - black_stones) * 100
 
         # 2. Weight the board based on position
         whiteWeightMap = [
