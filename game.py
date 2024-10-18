@@ -2,7 +2,6 @@ from constants import *
 import numpy as np
 import copy
 
-
 class FiancoBoard:
     def __init__(self):
         self.board = self.setup_board()
@@ -111,7 +110,7 @@ class FiancoBoard:
         else:
             print("Invalid move or capture.")
         
-        self.move_list.append((start, end)) # Add the move to the move list
+        #self.move_list.append((start, end)) # Add the move to the move list
 
         
         # Switch player after a valid move

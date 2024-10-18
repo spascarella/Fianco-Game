@@ -3,6 +3,14 @@ import sys
 from constants import *
 from game import FiancoBoard
 from engine import FiancoEngine
+import time
+
+#TODO: 
+# Improve Iterative Deepening Search
+# Implement killer moves
+# Implement Transposition Table
+### PRIORITY: IDS, Killer Moves, Transposition Table
+
 
 class FiancoGUI:
     def __init__(self, board):
@@ -17,7 +25,7 @@ class FiancoGUI:
 
         self.selected_piece = None  # Coordinates of the selected piece
         self.valid_moves = []  # List of valid moves for the selected piece
-
+        self.last_move = None  # Last move made by the players
 
     def draw_homescreen(self):
         '''Draw the homescreen with player selection options.'''
@@ -92,17 +100,30 @@ class FiancoGUI:
     
     def draw_board(self):
         '''Draw the board grid and chess notation.'''
-        # Clear the screen
+        # Clear the entire screen
         self.screen.fill(BACKGROUND_COLOR)
+
+        # Draw board area background (optional, if you want a different color)
+        board_area = pygame.Rect(0, 0, GRID_SIZE * SQUARE_SIZE, HEIGHT)
+        pygame.draw.rect(self.screen, BACKGROUND_COLOR, board_area)
 
         # Draw grid lines
         for i in range(GRID_SIZE + 1):
             # Vertical lines
-            pygame.draw.line(self.screen, LINE_COLOR, (i * SQUARE_SIZE, 0), (i * SQUARE_SIZE, HEIGHT))
+            pygame.draw.line(
+                self.screen, LINE_COLOR,
+                (i * SQUARE_SIZE, 0),
+                (i * SQUARE_SIZE, HEIGHT)
+            )
             # Horizontal lines
-            pygame.draw.line(self.screen, LINE_COLOR, (0, i * SQUARE_SIZE), (WIDTH, i * SQUARE_SIZE))
+            pygame.draw.line(
+                self.screen, LINE_COLOR,
+                (0, i * SQUARE_SIZE),
+                (GRID_SIZE * SQUARE_SIZE, i * SQUARE_SIZE)
+            )
 
-        letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']  
+        # Draw notation only on the board area
+        letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']
         numbers = [str(i) for i in range(9, 0, -1)]  # Ranks from '9' down to '1'
 
         # Loop over each cell to draw the notation in the center
@@ -119,9 +140,8 @@ class FiancoGUI:
                 text_rect = notation_text.get_rect(center=(x, y))
 
                 # If the cell is empty, draw the notation
-                #if self.board.board[r, c] == 0:
-                self.screen.blit(notation_text, text_rect)
-
+                if self.board.board[r, c] == 0:
+                    self.screen.blit(notation_text, text_rect)
 
     def draw_stones(self):
         '''Draw the stones on the board.'''
@@ -147,9 +167,48 @@ class FiancoGUI:
                 # Draw a black outline around the stone for visibility
                 pygame.draw.circle(self.screen, (0, 0, 0), (x, y), STONE_RADIUS, 1)
 
+    def draw_move_log(self):
+        '''Draw the last performed move in the dedicated log area.'''
+        # Define the area for the move log
+        log_area = pygame.Rect(GRID_SIZE * SQUARE_SIZE, 0, WIDTH - GRID_SIZE * SQUARE_SIZE, HEIGHT)
+        pygame.draw.rect(self.screen, (200, 200, 200), log_area)  # Light gray background
+
+        # Draw a vertical line to separate the board and the move log
+        pygame.draw.line(
+            self.screen, LINE_COLOR,
+            (GRID_SIZE * SQUARE_SIZE, 0),
+            (GRID_SIZE * SQUARE_SIZE, HEIGHT),
+            2  # Line thickness
+        )
+
+        # Display the last move
+        padding = 10
+        y_offset = padding
+
+        if self.last_move:
+            move_text = self.font.render("Last Move:", True, FONT_COLOR)
+            self.screen.blit(move_text, (GRID_SIZE * SQUARE_SIZE + padding, y_offset))
+            y_offset += move_text.get_height() + 5
+
+            player, start_notation, end_notation = self.last_move
+            move_detail = f"{player}: {start_notation} to {end_notation}"
+            move_detail_text = self.notation_font.render(move_detail, True, FONT_COLOR)
+            self.screen.blit(move_detail_text, (GRID_SIZE * SQUARE_SIZE + padding, y_offset))
+
+    def position_to_notation(self, position):
+        """Convert board coordinates to notation."""
+        row, col = position
+        letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']
+        numbers = [str(i) for i in range(9, 0, -1)]  # '9' down to '1'
+        notation = letters[col] + numbers[row]
+        return notation
+
     def handle_click(self, position):
         '''Handle the mouse click events on the board.'''
         x, y = position  # Get the x, y coordinates of the mouse click
+        # Check if click is within the board area
+        if x >= GRID_SIZE * SQUARE_SIZE:
+            return  # Click is outside the board area
         col = x // SQUARE_SIZE  # Calculate the column
         row = y // SQUARE_SIZE  # Calculate the row
         if 0 <= col < GRID_SIZE and 0 <= row < GRID_SIZE:
@@ -159,14 +218,11 @@ class FiancoGUI:
                 if piece == self.board.current_player:
                     # Select the piece and get its valid moves and captures
                     self.selected_piece = (row, col)
-                    print("Selected piece:", self.selected_piece)
                     valid_moves, captures = self.board.get_valid_moves_and_captures(self.board.current_player)
                     moves = captures if captures else valid_moves
-                    print("Valid moves:", moves)
                     # Filter moves starting from the selected piece
                     self.valid_moves = [move for move in moves if move[0] == self.selected_piece]
             else:
-                print("Selected piece:", self.selected_piece)
                 # A piece is already selected
                 if piece == self.board.current_player:
                     # Change selection to the new piece
@@ -180,6 +236,11 @@ class FiancoGUI:
                     if move in self.valid_moves:
                         # Apply the move
                         self.board.apply_move(move)
+                        # Update the last move
+                        player = 'White' if self.board.current_player == 2 else 'Black'  # current_player has switched
+                        start_notation = self.position_to_notation(self.selected_piece)
+                        end_notation = self.position_to_notation((row, col))
+                        self.last_move = (player, start_notation, end_notation)
                         # Clear the selection
                         self.selected_piece = None
                         self.valid_moves = []
@@ -192,12 +253,18 @@ class FiancoGUI:
             self.selected_piece = None
             self.valid_moves = []
 
+# Main game loop as per previous instructions
 
 if __name__ == "__main__":
     board = FiancoBoard()
     gui = FiancoGUI(board)
     engine = FiancoEngine()
     player1, player2 = gui.player_selection()
+    gui.draw_board()
+    gui.draw_stones()
+    gui.draw_move_log()  # Draw the last move in the log area
+    pygame.display.flip()
+
     running = True
     while running:
         winner = board.is_winner()
@@ -215,37 +282,92 @@ if __name__ == "__main__":
                     running = False
                     pygame.quit()
                     sys.exit()
+                if event.key == pygame.K_r:
+                    player1, player2 = gui.player_selection()
+                    board = FiancoBoard()
+                    gui = FiancoGUI(board)
+                    engine = FiancoEngine()
 
             # Handle mouse clicks for human players
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if player1 == "Human" and player2 == "Human":
                     position = event.pos
                     gui.handle_click(position)
+                    gui.draw_board()
+                    gui.draw_stones()
+                    gui.draw_move_log()  # Draw the last move in the log area
+                    pygame.display.flip()
                 elif player1 == "Human" and player2 == "Negamax":
                     if board.current_player == 1:
                         position = event.pos
                         gui.handle_click(position)
+                        gui.draw_board()
+                        gui.draw_stones()
+                        gui.draw_move_log()  # Draw the last move in the log area
+                        pygame.display.flip()
                 elif player1 == "Negamax" and player2 == "Human":
                     if board.current_player == 2:
                         position = event.pos
                         gui.handle_click(position)
+                        gui.draw_board()
+                        gui.draw_stones()
+                        gui.draw_move_log()  # Draw the last move in the log area
+                        pygame.display.flip()
 
         # Process AI moves outside the event loop
         if not running:
             break  # Exit the loop if the game is over
 
         if player1 == "Negamax" and board.current_player == 1:
-            print("Player 1 (AI) is thinking...")
-            score, best_move = engine.negamax(board, DEPTH, ALPHA, BETA, 1)
-            board.apply_move(best_move)
+            best_move = None
+            start_time = time.time()
+            for depth in range(1, MAX_DEPTH + 1):
+                current_time = time.time()
+                elapsed_time = current_time - start_time
+                if elapsed_time > MAX_TIME:
+                    break
+                score, move = engine.negamax(board, depth, ALPHA, BETA, 1)
+                if move:
+                    best_move = move
+                else:
+                    break  # No valid moves
+            if best_move:
+                print(f"Best move: {best_move} found at depth {depth} with score {score} in {elapsed_time:.2f} seconds.")
+                board.apply_move(best_move)
+                # Update the last move
+                player = 'White'
+                start_pos, end_pos = best_move
+                start_notation = gui.position_to_notation(start_pos)
+                end_notation = gui.position_to_notation(end_pos)
+                gui.last_move = (player, start_notation, end_notation)
+            else:
+                running = False  # No valid moves, game over
 
         elif player2 == "Negamax" and board.current_player == 2:
-            print("Player 2 (AI) is thinking...")
-            _, best_move = engine.negamax(board, DEPTH, ALPHA, BETA, -1)
+            best_move = None
+            start_time = time.time()
+            for depth in range(1, MAX_DEPTH + 1):
+                current_time = time.time()
+                elapsed_time = current_time - start_time
+                if elapsed_time > MAX_TIME:
+                    break
+                score, move = engine.negamax(board, depth, ALPHA, BETA, -1)
+                if move:
+                    best_move = move
+                else:
+                    break  # No valid moves
             if best_move:
+                print(f"Best move: {best_move} found at depth {depth} with score {score}")
                 board.apply_move(best_move)
-
-
+                # Update the last move
+                player = 'Black'
+                start_pos, end_pos = best_move
+                start_notation = gui.position_to_notation(start_pos)
+                end_notation = gui.position_to_notation(end_pos)
+                gui.last_move = (player, start_notation, end_notation)
+            else:
+                running = False  # No valid moves, game over
         gui.draw_board()
         gui.draw_stones()
+        gui.draw_move_log()  # Draw the last move in the log area
         pygame.display.flip()
