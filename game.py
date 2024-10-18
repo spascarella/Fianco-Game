@@ -6,29 +6,32 @@ import copy
 class FiancoBoard:
     def __init__(self):
         self.board = self.setup_board()
-        self.current_player = 2  # 1 for white, 2 for black
+        self.current_player = 1  # 1 for white, 2 for black
         self.move_history = []  # To store history of moves
         self.move_list = []
 
     def setup_board(self):
-        board = np.zeros((9, 9), dtype=int)
-        # White
-        board[0, :] = 1
-        board[1, (1, 7)] = 1
-        board[2, (2, 6)] = 1
-        board[3, (3, 5)] = 1
+        board = np.zeros((9, 9), dtype=int)      
+
         # Black
-        board[8, :] = 2
-        board[7, (1, 7)] = 2
-        board[6, (2, 6)] = 2
-        board[5, (3, 5)] = 2
+        board[0, :] = 2
+        board[1, (1, 7)] = 2
+        board[2, (2, 6)] = 2
+        board[3, (3, 5)] = 2
+
+        # White
+        board[8, :] = 1
+        board[7, (1, 7)] = 1
+        board[6, (2, 6)] = 1
+        board[5, (3, 5)] = 1
+
         return board
     
     def get_valid_moves_and_captures(self, player):
         valid_moves = []
         captures = []
-        direction = -1 if player == 2 else 1  
-        last_row = 0 if player == 2 else 8  # The opponent's last row
+        direction = -1 if player == 1 else 1 # White moves down, Black moves up
+        last_row = 0 if player == 1 else 8  # The opponent's last row
 
         for r in range(9):
             for c in range(9):
@@ -116,16 +119,19 @@ class FiancoBoard:
         
     
     def is_winner(self): # Check if there is a winner
-        if np.any(self.board[0, :] == 2): # Black wins if any black stone is in row 0
-            return 2
-        if np.any(self.board[8, :] == 1):  # White wins if any white stone is in row 8
+        if np.any(self.board[0, :] == 1): # Black wins if any black stone is in row 0
             return 1
+        if np.any(self.board[8, :] == 2):  # White wins if any white stone is in row 8
+            return 2
         elif np.sum(self.board == 1) == 0: # Black wins if no white stones are left
             return 2
         elif np.sum(self.board == 2) == 0: # White wins if no black stones are left
             return 1
-        elif not self.get_valid_moves_and_captures(self.current_player): # Player wins if the opponent has no valid moves
-            return 3 - self.current_player
+        else:
+            # Check if the opponent has no valid moves
+            valid_moves, captures = self.get_valid_moves_and_captures(self.current_player)
+            if not valid_moves and not captures:
+                return 3 - self.current_player  # The opponent wins if there are no valid moves or captures for the current player
         return None
     
     def save_state(self):
@@ -155,7 +161,7 @@ class FiancoBoard:
         score_diff = (white_stones - black_stones) * 100
 
         # 2. Weight the board based on position
-        whiteWeightMap = [
+        blackWeightMap = [
             [0, 0, 0, 0, 0, 0, 0, 0, 0],
             [2, 2, 2, 2, 2, 2, 2, 2, 2],
             [4, 4, 4, 4, 4, 4, 4, 4, 4],
@@ -166,14 +172,14 @@ class FiancoBoard:
             [14, 14, 14, 14, 14, 14, 14, 14, 14],
             [16, 16, 16, 16, 16, 16, 16, 16, 16]
         ]
-        blackWeightMap = whiteWeightMap[::-1]
+        whiteWeightMap = blackWeightMap[::-1]
+
         white_score += np.where(self.board == 1, whiteWeightMap, 0).sum()
         black_score += np.where(self.board == 2, blackWeightMap, 0).sum()
 
-
         # 4. Penalize for opponent's stones in your half
-        opponent_in_white_half = (np.sum(self.board[0:5, :] == 2)) * 5  # Black stones in white's half
-        opponent_in_black_half = np.sum(self.board[5:9, :] == 1) * 5  # White stones in black's half
+        opponent_in_white_half = (np.sum(self.board[5:9, :] == 2)) * 5  # Black stones in white's half
+        opponent_in_black_half = np.sum(self.board[0:5, :] == 1) * 5  # White stones in black's half
         white_score -= opponent_in_white_half
         black_score -= opponent_in_black_half
 
