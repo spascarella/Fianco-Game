@@ -1,5 +1,6 @@
 class FiancoEngine:
     def __init__(self):
+        # Initialize the killer move table with two slots per depth (adjust size as needed)
         self.killer_moves = [[None, None] for _ in range(100)]
         pass
 
@@ -20,9 +21,14 @@ class FiancoEngine:
             board.undo()
             return score, single_move
 
-        # Implement PVS by separating principal variation move from other moves
+        # Apply killer moves at the current depth first
+        killer_moves_at_depth = [move for move in self.killer_moves[depth] if move in moves] # Only consider moves that are still valid
+        for killer_move in killer_moves_at_depth:
+            moves.remove(killer_move)  # Remove it from moves so it doesn't get processed twice
+        moves = killer_moves_at_depth + moves  # Put killer moves first
+        print(f"Killer moves at depth {depth}: {killer_moves_at_depth}")
         first_move = True
-        change = 0 if captures else 1
+        change = 0 if captures else 1  # Quiet search if no captures
 
         for move in moves:
             board.apply_move(move)
@@ -45,8 +51,16 @@ class FiancoEngine:
                 best_score = score
                 best_move = move
 
+            # Update alpha and check for beta-cutoff
             alpha = max(alpha, score)
             if alpha >= beta:
+                # Store the killer move in the killer table for this depth
+                if move not in self.killer_moves[depth]:
+                    # Insert the move into the killer moves list, replacing the least recent if needed
+                    if self.killer_moves[depth][0] is None:
+                        self.killer_moves[depth][0] = move
+                    else:
+                        self.killer_moves[depth][1] = move
                 break  # Beta cutoff
 
         return best_score, best_move
