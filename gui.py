@@ -9,7 +9,7 @@ import time
 # Improve Iterative Deepening Search
 # Implement killer moves
 # Implement Transposition Table
-### PRIORITY: IDS, Killer Moves, Transposition Table
+## PRIORITY: IDS, Killer Moves, Transposition Table
 
 
 class FiancoGUI:
@@ -19,6 +19,7 @@ class FiancoGUI:
         pygame.display.set_caption("Fianco Game by Salvatore Pascarella")
         self.font = pygame.font.Font(None, 36)
         self.notation_font = pygame.font.Font(None, 18)  # Smaller font for notation
+        self.timer_font = pygame.font.Font(None, 28)  # Font for displaying the timers
         self.board = board  
         self.selected_player1 = "Human"  # Default Player 1 (white) selection
         self.selected_player2 = "Human"  # Default Player 2 (black) selection
@@ -26,6 +27,60 @@ class FiancoGUI:
         self.selected_piece = None  # Coordinates of the selected piece
         self.valid_moves = []  # List of valid moves for the selected piece
         self.last_move = None  # Last move made by the players
+
+        # Player timers (in seconds) and a variable to track the start time
+        self.white_time = 600  # 10 minutes in seconds
+        self.black_time = 600  # 10 minutes in seconds
+        self.start_time = time.time()  # Keep track of when the player's turn started
+
+    def draw_timers(self):
+        """Draw the timers for both players with White on top of Black at the bottom-right corner."""
+        padding = 10
+        white_timer_text = self.timer_font.render(f"White: {self.format_time(self.white_time)}", True, FONT_COLOR)
+        black_timer_text = self.timer_font.render(f"Black: {self.format_time(self.black_time)}", True, FONT_COLOR)
+
+        # Calculate positions for the timers, placing white above black
+        white_timer_position = (WIDTH - white_timer_text.get_width() - padding, HEIGHT - black_timer_text.get_height() - white_timer_text.get_height() - (padding * 2))
+        black_timer_position = (WIDTH - black_timer_text.get_width() - padding, HEIGHT - black_timer_text.get_height() - padding)
+
+        # Draw the timers on the screen
+        self.screen.blit(white_timer_text, white_timer_position)
+        self.screen.blit(black_timer_text, black_timer_position)
+
+    def format_time(self, seconds):
+        """Convert seconds to a MM:SS format."""
+        minutes = seconds // 60
+        seconds = seconds % 60
+        return f"{int(minutes):02}:{int(seconds):02}"
+
+    def update_timers(self, current_player):
+        """Update the timer for the current player."""
+        current_time = time.time()
+        elapsed_time = current_time - self.start_time
+
+        if current_player == 1:
+            self.white_time -= elapsed_time
+            if self.white_time <= 0:
+                self.white_time = 0
+                print("White ran out of time! Black wins!")
+                pygame.quit()
+                sys.exit()
+        else:
+            self.black_time -= elapsed_time
+            if self.black_time <= 0:
+                self.black_time = 0
+                print("Black ran out of time! White wins!")
+                pygame.quit()
+                sys.exit()
+
+        # Reset the start time to the current time
+        self.start_time = current_time
+
+    def reset_timers(self):
+        """Reset the timers for both players."""
+        self.white_time = 600  # Reset white timer to 10 minutes
+        self.black_time = 600  # Reset black timer to 10 minutes
+        self.start_time = time.time()  # Reset start time
 
     def draw_homescreen(self):
         '''Draw the homescreen with player selection options.'''
@@ -263,6 +318,7 @@ if __name__ == "__main__":
     gui.draw_board()
     gui.draw_stones()
     gui.draw_move_log()  # Draw the last move in the log area
+    gui.draw_timers()  # Draw the timers for the players
     pygame.display.flip()
 
     running = True
@@ -287,15 +343,18 @@ if __name__ == "__main__":
                     board = FiancoBoard()
                     gui = FiancoGUI(board)
                     engine = FiancoEngine()
+                    gui.reset_timers()  # Reset the timers when restarting
 
             # Handle mouse clicks for human players
             if event.type == pygame.MOUSEBUTTONDOWN:
+                gui.update_timers(board.current_player)  # Update the timer for the current player
                 if player1 == "Human" and player2 == "Human":
                     position = event.pos
                     gui.handle_click(position)
                     gui.draw_board()
                     gui.draw_stones()
                     gui.draw_move_log()  # Draw the last move in the log area
+                    gui.draw_timers()  # Draw the updated timers
                     pygame.display.flip()
                 elif player1 == "Human" and player2 == "Negamax":
                     if board.current_player == 1:
@@ -304,6 +363,7 @@ if __name__ == "__main__":
                         gui.draw_board()
                         gui.draw_stones()
                         gui.draw_move_log()  # Draw the last move in the log area
+                        gui.draw_timers()  # Draw the updated timers
                         pygame.display.flip()
                 elif player1 == "Negamax" and player2 == "Human":
                     if board.current_player == 2:
@@ -312,6 +372,7 @@ if __name__ == "__main__":
                         gui.draw_board()
                         gui.draw_stones()
                         gui.draw_move_log()  # Draw the last move in the log area
+                        gui.draw_timers()  # Draw the updated timers
                         pygame.display.flip()
 
         # Process AI moves outside the event loop
@@ -319,6 +380,8 @@ if __name__ == "__main__":
             break  # Exit the loop if the game is over
 
         if player1 == "Negamax" and board.current_player == 1:
+            # Update the AI player timer just before and after making the move
+            gui.update_timers(board.current_player)
             best_move = None
             start_time = time.time()
             for depth in range(1, MAX_DEPTH + 1):
@@ -334,6 +397,8 @@ if __name__ == "__main__":
             if best_move:
                 print(f"Best move: {best_move} found at depth {depth} with score {score} in {elapsed_time:.2f} seconds.")
                 board.apply_move(best_move)
+                gui.update_timers(board.current_player)  # Update the timer for the current player
+                gui.start_time = time.time()  # Reset start time after each move
                 # Update the last move
                 player = 'White'
                 start_pos, end_pos = best_move
@@ -344,6 +409,8 @@ if __name__ == "__main__":
                 running = False  # No valid moves, game over
 
         elif player2 == "Negamax" and board.current_player == 2:
+            # Update the AI player timer just before and after making the move
+            gui.update_timers(board.current_player)
             best_move = None
             start_time = time.time()
             for depth in range(1, MAX_DEPTH + 1):
@@ -359,6 +426,8 @@ if __name__ == "__main__":
             if best_move:
                 print(f"Best move: {best_move} found at depth {depth} with score {score}")
                 board.apply_move(best_move)
+                gui.update_timers(board.current_player)  # Update the timer for the current player
+                gui.start_time = time.time()  # Reset start time after each move
                 # Update the last move
                 player = 'Black'
                 start_pos, end_pos = best_move
@@ -367,7 +436,9 @@ if __name__ == "__main__":
                 gui.last_move = (player, start_notation, end_notation)
             else:
                 running = False  # No valid moves, game over
+
         gui.draw_board()
         gui.draw_stones()
         gui.draw_move_log()  # Draw the last move in the log area
+        gui.draw_timers()  # Draw the updated timers
         pygame.display.flip()

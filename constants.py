@@ -1,12 +1,12 @@
 import math
 
-WIDTH, HEIGHT = 800, 600 # Window size
-GRID_SIZE = 9 # 9x9 grid
+WIDTH, HEIGHT = 800, 600 
+GRID_SIZE = 9 
 SQUARE_SIZE = HEIGHT // GRID_SIZE
-BACKGROUND_COLOR = (217, 185, 155)  # Beige
-LINE_COLOR = (0, 0, 0)  # Black
-FONT_COLOR = (0, 0, 0)  # Black
-STONE_RADIUS = SQUARE_SIZE // 3 # Radius of the stones
+BACKGROUND_COLOR = (217, 185, 155)  
+LINE_COLOR = (0, 0, 0)  
+FONT_COLOR = (0, 0, 0)  
+STONE_RADIUS = SQUARE_SIZE // 3 # 
 
 
 DEPTH = 5
