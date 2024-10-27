@@ -16,6 +16,7 @@ This project was developed for the Intelligent Search and Games course @ Maastri
 - [x] Negamax with alpha beta pruning algorithm
     *   [x] Iterative Deepening Search (IDS)
     *   [x] Quiescence Search (QS)
+    *   [x] Principal Variation Search (PVS)
     *   [x] Killer Moves
 - [x] Transposition Table
 - [x] GUI 
